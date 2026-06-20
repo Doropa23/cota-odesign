@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Cotação | Proposta Financeira</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --verde-escuro:#1d4d2b;
+    --verde:#2e6b3e;
+    --verde-claro:#eaf3ec;
+    --cinza-borda:#d8dfd9;
+    --texto:#222;
+    --texto-suave:#555;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    font-family:'Segoe UI', Arial, Helvetica, sans-serif;
+    background:#eef1ee;
+    margin:0;
+    padding:0;
+    color:var(--texto);
+  }
+
+  /* ===================== BARRA DE FERRAMENTAS (não aparece na impressão) ===================== */
+  .toolbar{
+    background:var(--verde-escuro);
+    color:#fff;
+    padding:0 24px;
+    height:60px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    position:sticky;
+    top:0;
+    z-index:100;
+    box-sizing:border-box;
+  }
+  .toolbar h1{
+    font-size:18px;
+    margin:0;
+    font-weight:600;
+  }
+  .toolbar .botoes{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .btn{
+    border:none;
+    padding:9px 16px;
+    border-radius:6px;
+    font-size:14px;
+    cursor:pointer;
+    font-weight:600;
+    transition:opacity .15s;
+  }
+  .btn:hover{opacity:.85;}
+  .btn-primario{background:#fff;color:var(--verde-escuro);}
+  .btn-secundario{background:#3a7a4a;color:#fff;}
+  .btn-perigo{background:#a83232;color:#fff;}
+
+  /* ===================== LAYOUT PRINCIPAL ===================== */
+  .container{
+    max-width:1500px;
+    margin:0 auto;
+    padding:24px;
+    display:grid;
+    grid-template-columns:420px 1fr;
+    gap:24px;
+    align-items:start;
+    height:calc(100vh - 60px);
+  }
+
+  @media (max-width:1000px){
+    .container{grid-template-columns:1fr; height:auto;}
+    .painel{height:auto !important; max-height:none !important;}
+    .preview-coluna{position:static !important; height:auto !important;}
+  }
+
+  /* ===================== PAINEL DE EDIÇÃO (scroll próprio) ===================== */
+  .painel{
+    background:#fff;
+    border-radius:10px;
+    padding:20px;
+    box-shadow:0 1px 4px rgba(0,0,0,.08);
+    height:100%;
+    overflow-y:auto;
+    scrollbar-width:thin;
+  }
+  .painel h2{
+    font-size:15px;
+    color:var(--verde-escuro);
+    border-bottom:2px solid var(--verde-claro);
+    padding-bottom:8px;
+    margin:0 0 14px 0;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+  }
+  .painel h2:not(:first-child){margin-top:26px;}
+
+  .campo{margin-bottom:12px;}
+  .campo label{
+    display:block;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--texto-suave);
+    margin-bottom:4px;
+  }
+  .campo input[type="text"],
+  .campo input[type="date"],
+  .campo input[type="number"],
+  .campo textarea{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    font-size:13.5px;
+    font-family:inherit;
+    background:#fafafa;
+  }
+  .campo textarea{resize:vertical;min-height:60px;}
+  .campo input:focus, .campo textarea:focus{
+    outline:none;
+    border-color:var(--verde);
+    background:#fff;
+  }
+
+  .linha-dupla{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  /* Itens da tabela no painel */
+  .item-edit{
+    border:1px solid var(--cinza-borda);
+    border-radius:8px;
+    padding:12px;
+    margin-bottom:10px;
+    background:#fbfcfb;
+    position:relative;
+  }
+  .item-edit .num-badge{
+    position:absolute;
+    top:-10px;
+    left:10px;
+    background:var(--verde-escuro);
+    color:#fff;
+    font-size:11px;
+    font-weight:700;
+    padding:2px 8px;
+    border-radius:10px;
+  }
+  .item-edit .remover-item{
+    position:absolute;
+    top:-10px;
+    right:10px;
+    background:#a83232;
+    color:#fff;
+    border:none;
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    font-size:12px;
+    line-height:1;
+    cursor:pointer;
+  }
+  .campo-valor-wrap{display:flex;align-items:center;gap:6px;}
+  .campo-valor-wrap input{text-align:right;}
+  .sufixo-moeda{font-size:12px;color:var(--texto-suave);white-space:nowrap;}
+
+  .btn-add-item{
+    width:100%;
+    padding:10px;
+    border:2px dashed var(--verde);
+    background:var(--verde-claro);
+    color:var(--verde-escuro);
+    border-radius:8px;
+    font-weight:600;
+    cursor:pointer;
+    font-size:13.5px;
+  }
+  .btn-add-item:hover{background:#dcecdf;}
+
+  .checkbox-linha{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .checkbox-linha input{width:16px;height:16px;}
+  .checkbox-linha label{font-size:13px;font-weight:600;color:var(--texto-suave);margin:0;}
+
+  /* ===================== PRÉ-VISUALIZAÇÃO (documento) ===================== */
+  .preview-coluna{
+    height:100%;
+    overflow-y:auto;
+    display:flex;
+    justify-content:center;
+    scrollbar-width:thin;
+  }
+  .preview-wrap{
+    background:#fff;
+    box-shadow:0 2px 10px rgba(0,0,0,.12);
+    border-radius:4px;
+    flex-shrink:0;
+  }
+
+  /* === DOCUMENTO A4 exacto: 210×297mm a 96dpi = 794×1123px === */
+  #documento{
+    width:794px;           /* 210mm */
+    height:1123px;         /* 297mm */
+    margin:0 auto;
+    /* padding topo=17.3mm lateral=15mm — medidos no PDF de referência */
+    padding:65px 57px 0 57px;
+    font-family:'Segoe UI', Arial, sans-serif;
+    color:#222;
+    position:relative;
+    box-sizing:border-box;
+    overflow:visible;
+  }
+
+  /* Cabeçalho: PROPOSTA FINANCEIRA topo=17.3mm, linha verde subida 3mm (≈11.34px) → padding-bottom=8.66px */
+  .doc-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom:3px solid var(--verde-escuro);
+    padding-bottom:8.66px;
+    /* margin-bottom aumentado 11.34px para a Entidade manter a mesma posição de sempre */
+    margin-bottom:36.34px;
+  }
+  .doc-empresa{display:flex;align-items:center;gap:14px;}
+  .doc-empresa img{
+    max-height:64px;
+    max-width:130px;
+    object-fit:contain;
+  }
+  .doc-empresa-info .nome-empresa{
+    font-size:18px;
+    font-weight:700;
+    color:var(--verde-escuro);
+    margin:0;
+  }
+  .doc-empresa-info .sub-empresa{
+    font-size:11.5px;
+    color:var(--texto-suave);
+    margin:2px 0 0 0;
+    line-height:1.5;
+    white-space:pre-line;
+  }
+  .doc-titulo{text-align:right;}
+  .doc-titulo h1{
+    font-size:19px;        /* 19pt = tamanho medido no PDF */
+    color:var(--verde-escuro);
+    letter-spacing:1px;
+    margin:0;
+    line-height:1;
+  }
+
+  /* Entidade top=29mm, Att top=35mm → line-height≈22.7px entre linhas */
+  .doc-info-cliente{
+    /* margin-bottom: Att bot=38.7mm até tabela topo=45mm = 6.3mm≈24px */
+    margin-bottom:24px;
+    font-size:10.5px;      /* 10.5pt medido no PDF */
+    line-height:22.7px;    /* espaço exacto entre Entidade e Att */
+  }
+  .doc-info-cliente b{color:var(--verde-escuro);}
+  .doc-info-cliente .linha-att{padding-left:0;}
+
+  .doc-objectivo{margin-bottom:20px;}
+  .doc-objectivo h3{
+    font-size:14px;
+    color:var(--verde-escuro);
+    margin:0 0 6px 0;
+    font-weight:700;
+  }
+  .doc-objectivo p{
+    font-size:13px;
+    line-height:1.7;
+    margin:0;
+    text-align:justify;
+    color:#333;
+  }
+
+  /* Tabela: header height=8.5mm≈32px, rows height=12.7mm≈48px
+     Colunas exactas (mm→px): Nº=12.7mm=48px | Serviço=48.8mm=184px | Desc=86.8mm=328px | Valor=31.7mm=120px */
+  table.doc-tabela{
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:0;
+    font-size:9.5px;
+    border:1px solid var(--cinza-borda);
+    table-layout:fixed;
+  }
+  table.doc-tabela thead tr{
+    background:var(--verde-escuro);
+    color:#fff;
+  }
+  table.doc-tabela th{
+    padding:0 6px;
+    height:32px;           /* 8.5mm */
+    text-align:center;
+    font-size:9.5px;
+    font-weight:700;
+    border:1px solid var(--verde-escuro);
+    vertical-align:middle;
+  }
+  table.doc-tabela th.col-num  {width:48px;}   /* 12.7mm */
+  table.doc-tabela th.col-servico{width:184px;} /* 48.8mm */
+  table.doc-tabela th.col-desc {width:328px;}  /* 86.8mm */
+  table.doc-tabela th.col-valor{width:120px;}  /* 31.7mm */
+
+  table.doc-tabela td{
+    padding:0 6px;
+    height:48px;           /* 12.7mm */
+    border:1px solid var(--cinza-borda);
+    vertical-align:middle;
+    font-size:9px;
+    text-align:center;
+  }
+  table.doc-tabela td.col-num{
+    text-align:center;
+    font-weight:700;
+    font-size:9.5px;
+    color:var(--verde-escuro);
+  }
+  table.doc-tabela td.col-servico{font-weight:700;text-align:center;}
+  table.doc-tabela td.col-desc{color:#444;text-align:center;}
+  table.doc-tabela td.col-valor{
+    text-align:center;
+    font-weight:700;
+    white-space:nowrap;
+  }
+
+  /* Total: top=84.2mm, height=12mm≈45px */
+  .doc-total-linha{
+    display:flex;
+    justify-content:flex-end;
+    padding:0 6px;
+    height:45px;
+    border:1px solid var(--cinza-borda);
+    border-top:none;
+    align-items:center;
+  }
+  .doc-total-linha .caixa-total{display:flex;align-items:center;gap:14px;}
+  .doc-total-linha .rotulo{
+    font-size:10.5px;
+    font-weight:700;
+    color:var(--verde-escuro);
+  }
+  .doc-total-linha .montante{
+    font-size:11.5px;
+    font-weight:800;
+    color:var(--verde-escuro);
+  }
+
+  /* Nota: top=103.6mm → margin-top desde total bot=90.9mm = 12.7mm≈48px */
+  .doc-nota{
+    margin-top:48px;
+    background:var(--verde-claro);
+    border:1px solid #cfe2d3;
+    border-radius:4px;
+    padding:10px 12px;
+  }
+  .doc-nota h4{
+    font-size:9.5px;
+    margin:0 0 6px 0;
+    color:var(--verde-escuro);
+    font-weight:700;
+  }
+  .doc-nota .nota-item{
+    font-size:8.5px;
+    line-height:1.55;
+    color:#3a3a3a;
+    margin-bottom:6px;
+    text-align:justify;
+  }
+  .doc-nota .nota-item:last-child{margin-bottom:0;}
+
+  /* Rodapé: linha cinza top=282.9mm → bottom=14.1mm≈53px do fundo da página
+     Data: top=286.3mm → logo abaixo da linha
+     Número: top=278.0mm → acima da linha */
+  .doc-footer{
+    position:absolute;
+    bottom:53px;           /* 14.1mm do fundo */
+    left:57px;
+    right:57px;
+    font-size:8.5px;
+    color:var(--texto-suave);
+  }
+  .doc-footer-linha{
+    border-top:1px solid var(--cinza-borda);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    padding-top:8px;
+  }
+  .doc-footer-esq{display:flex;flex-direction:column;gap:3px;}
+  .doc-footer-num{
+    font-size:8.5px;
+    color:var(--texto-suave);
+    /* Número fica acima da linha: 282.9-278.0=4.9mm≈18px acima */
+    margin-bottom:18px;
+  }
+  .doc-footer .assinatura{text-align:center;}
+  .doc-footer .linha-assinatura{
+    width:170px;
+    border-top:1px solid #999;
+    margin-top:28px;
+    padding-top:4px;
+    font-size:8px;
+    text-align:center;
+  }
+
+  /* ===================== IMPRESSÃO ===================== */
+  @media print{
+    html, body{
+      background:#fff !important;
+      margin:0;
+      padding:0;
+      height:auto !important;
+      width:auto !important;
+    }
+    .toolbar, .painel, .rodape-app{display:none !important;}
+    .container{
+      display:block !important;
+      padding:0 !important;
+      margin:0 !important;
+      max-width:none !important;
+      height:auto !important;
+      width:auto !important;
+    }
+    .preview-coluna{
+      display:block !important;
+      height:auto !important;
+      overflow:visible !important;
+      padding:0 !important;
+      margin:0 !important;
+      width:auto !important;
+      justify-content:flex-start !important;
+    }
+    .preview-wrap{
+      box-shadow:none !important;
+      border-radius:0 !important;
+    }
+    /* #documento mantém EXACTAMENTE as mesmas dimensões/padding do ecrã (794px = A4 a 96dpi).
+       Não recalculamos largura, padding nem posições aqui — por isso o PDF fica
+       sempre igual ao que se vê na pré-visualização, incluindo em documentos longos. */
+    #documento{
+      box-shadow:none !important;
+      width:794px !important;
+      height:1123px !important;
+      position:relative !important;
+    }
+    .doc-footer{
+      page-break-inside:avoid;
+      position:absolute !important;
+      bottom:40px !important;
+      left:60px !important;
+      right:60px !important;
+    }
+    .doc-nota, table.doc-tabela{
+      page-break-inside:avoid;
+    }
+    @page{
+      size:A4;
+      margin:0;
+    }
+  }
+
+  /* ===================== LIGAÇÃO ONLINE ===================== */
+  .status-conexao{
+    font-size:12px;
+    padding:8px 10px;
+    border-radius:6px;
+    font-weight:600;
+  }
+  .status-vazio{background:#f1f1f1;color:#777;}
+  .status-ok{background:#e3f5e8;color:#1d6b34;}
+  .status-erro{background:#fdeaea;color:#a83232;}
+  .status-aguardar{background:#fff6e0;color:#9a6b00;}
+
+  /* ===================== MODAL DE COTAÇÕES GUARDADAS ===================== */
+  .modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.5);
+    z-index:1000;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .modal-overlay.aberto{display:flex;}
+  .modal-caixa{
+    background:#fff;
+    border-radius:10px;
+    width:100%;
+    max-width:780px;
+    max-height:85vh;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .modal-cabecalho{
+    background:var(--verde-escuro);
+    color:#fff;
+    padding:14px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .modal-cabecalho h3{margin:0;font-size:16px;}
+  .modal-cabecalho button{
+    background:none;
+    border:none;
+    color:#fff;
+    font-size:22px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .modal-corpo{
+    padding:16px 20px;
+    overflow-y:auto;
+  }
+  .cotacao-linha{
+    border:1px solid var(--cinza-borda);
+    border-radius:8px;
+    padding:12px 14px;
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+  }
+  .cotacao-linha .info b{display:block;color:var(--verde-escuro);font-size:13.5px;}
+  .cotacao-linha .info span{display:block;font-size:12px;color:var(--texto-suave);margin-top:2px;}
+  .cotacao-linha .valor-total{font-weight:800;color:var(--verde-escuro);white-space:nowrap;}
+  .cotacao-linha button{
+    background:var(--verde);
+    color:#fff;
+    border:none;
+    padding:7px 12px;
+    border-radius:6px;
+    font-size:12px;
+    cursor:pointer;
+    font-weight:600;
+    white-space:nowrap;
+  }
+
+  .doc-num-rodape{
+    font-size:11px;
+    color:var(--texto-suave);
+    margin-top:3px;
+  }
+    text-align:center;
+    font-size:11.5px;
+    color:#888;
+    padding:18px 0 30px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>📄 Gerador de Cotações — SAB Style</h1>
+  <div class="botoes">
+    <button class="btn btn-secundario" id="btnGuardarOnline" onclick="guardarCotacaoOnline()">☁️ Guardar Online</button>
+    <button class="btn btn-secundario" onclick="guardarDados()">💾 Guardar Local</button>
+    <button class="btn btn-perigo" onclick="limparTudo()">🗑️ Limpar Tudo</button>
+    <button class="btn btn-primario" id="btnExportarPdf" onclick="exportarPdf()">🖨️ Exportar PDF</button>
+    <button class="btn btn-primario" id="btnExportarSvg" onclick="exportarSvg()">🖼️ Exportar SVG</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ============== PAINEL DE EDIÇÃO ============== -->
+  <div class="painel">
+
+    <h2>🔗 Ligação Online (Google Sheets)</h2>
+    <div id="statusConexao" class="status-conexao status-vazio">⚪ A verificar ligação...</div>
+    <div class="campo" style="margin-top:10px;">
+      <button class="btn-add-item" style="border-color:#3a7a4a;background:#eaf3ec;color:#1d4d2b;" onclick="abrirListaCotacoes()">📋 Ver Cotações Guardadas Online</button>
+    </div>
+
+    <h2>Dados da Sua Empresa</h2>
+    <div class="campo">
+      <label>Logótipo (opcional)</label>
+      <input type="file" id="inputLogo" accept="image/*" onchange="carregarLogo(event)">
+    </div>
+    <div class="campo">
+      <label>Nome da Empresa</label>
+      <input type="text" id="empresaNome" placeholder="Ex: Sua Empresa, Lda" oninput="actualizar()">
+    </div>
+    <div class="campo">
+      <label>Dados de Contacto (telefone, email, NUIT, endereço…)</label>
+      <textarea id="empresaContacto" placeholder="Tel: 84 000 0000 | email@empresa.co.mz&#10;NUIT: 000000000" oninput="actualizar()"></textarea>
+    </div>
+
+    <h2>Dados do Documento</h2>
+    <div class="linha-dupla">
+      <div class="campo">
+        <label>Tipo de Documento</label>
+        <input type="text" id="docTitulo" value="PROPOSTA FINANCEIRA" oninput="actualizar()">
+      </div>
+      <div class="campo">
+        <label>Número (opcional)</label>
+        <input type="text" id="docNumero" placeholder="Nº 001/2026" oninput="actualizar()">
+      </div>
+    </div>
+    <div class="campo">
+      <label>Local e Data</label>
+      <div class="linha-dupla">
+        <input type="text" id="docLocal" placeholder="Maputo" oninput="actualizar()">
+        <input type="date" id="docData" oninput="actualizar()">
+      </div>
+    </div>
+
+    <h2>Dados do Cliente</h2>
+    <div class="campo">
+      <label>Entidade / Nome do Cliente</label>
+      <input type="text" id="clienteNome" placeholder="Ex: Sociedade Agropecuária de Banhine, Lda (SAB)" oninput="actualizar()">
+    </div>
+    <div class="campo">
+      <label>Att. (pessoa de contacto) — opcional</label>
+      <input type="text" id="clienteAtt" placeholder="Ex: José Luís" oninput="actualizar()">
+    </div>
+
+    <h2>Objectivo do Projecto</h2>
+    <div class="checkbox-linha">
+      <input type="checkbox" id="mostrarObjectivo" checked onchange="actualizar()">
+      <label for="mostrarObjectivo">Incluir secção "Objectivo do Projecto"</label>
+    </div>
+    <div class="campo">
+      <textarea id="objectivoTexto" rows="4" placeholder="Descreva o objectivo do projecto / serviço…" oninput="actualizar()"></textarea>
+    </div>
+
+    <h2>Itens da Cotação</h2>
+    <div id="listaItens"></div>
+    <button class="btn-add-item" onclick="adicionarItem()">+ Adicionar Item</button>
+
+    <h2>Moeda</h2>
+    <div class="campo">
+      <input type="text" id="moeda" value="MZN" oninput="actualizar()">
+    </div>
+
+    <h2>Nota / Condições</h2>
+    <div class="checkbox-linha">
+      <input type="checkbox" id="mostrarNota" checked onchange="actualizar()">
+      <label for="mostrarNota">Incluir secção "Nota"</label>
+    </div>
+    <div class="campo">
+      <label>Título da secção</label>
+      <input type="text" id="notaTitulo" value="Nota" oninput="actualizar()">
+    </div>
+    <div id="listaNotas"></div>
+    <button class="btn-add-item" onclick="adicionarNota()">+ Adicionar Linha de Nota</button>
+
+    <h2>Assinatura / Rodapé</h2>
+    <div class="checkbox-linha">
+      <input type="checkbox" id="mostrarAssinatura" checked onchange="actualizar()">
+      <label for="mostrarAssinatura">Incluir espaço de assinatura</label>
+    </div>
+    <div class="campo">
+      <label>Texto do rodapé (esquerda)</label>
+      <input type="text" id="rodapeTexto" placeholder="Ex: Obrigado pela preferência." oninput="actualizar()">
+    </div>
+
+  </div>
+
+  <!-- ============== PRÉ-VISUALIZAÇÃO (fixa, scroll independente) ============== -->
+  <div class="preview-coluna">
+  <div class="preview-wrap">
+    <div id="documento">
+
+      <div class="doc-header">
+        <div class="doc-empresa">
+          <img id="logoPreview" src="" alt="" style="display:none;">
+          <div class="doc-empresa-info">
+            <p class="nome-empresa" id="out-empresaNome"></p>
+            <p class="sub-empresa" id="out-empresaContacto"></p>
+          </div>
+        </div>
+        <div class="doc-titulo">
+          <h1 id="out-docTitulo">PROPOSTA FINANCEIRA</h1>
+        </div>
+      </div>
+
+      <div class="doc-info-cliente">
+        <div><b>Entidade:</b>&nbsp;<span id="out-clienteNome">—</span></div>
+        <div id="out-clienteAttWrap" class="linha-att"><b>Att:</b>&nbsp;<span id="out-clienteAtt"></span></div>
+      </div>
+
+      <div class="doc-objectivo" id="out-objectivoWrap">
+        <h3>Objectivo do projecto</h3>
+        <p id="out-objectivoTexto"></p>
+      </div>
+
+      <table class="doc-tabela">
+        <thead>
+          <tr>
+            <th class="col-num">Nº</th>
+            <th>Serviço</th>
+            <th>Descrição</th>
+            <th class="col-valor">Valor</th>
+          </tr>
+        </thead>
+        <tbody id="out-tabelaBody"></tbody>
+      </table>
+
+      <div class="doc-total-linha">
+        <div class="caixa-total">
+          <span class="rotulo">Total Geral</span>
+          <span class="montante" id="out-total">0,00 MZN</span>
+        </div>
+      </div>
+
+      <div class="doc-nota" id="out-notaWrap">
+        <h4 id="out-notaTitulo">Nota</h4>
+        <div id="out-notaLista"></div>
+      </div>
+
+      <div class="doc-footer" id="out-footerWrap">
+        <div class="doc-footer-num" id="out-docNumero"></div>
+        <div class="doc-footer-linha">
+          <div class="doc-footer-esq">
+            <div id="out-rodapeTexto"></div>
+          </div>
+          <div class="assinatura" id="out-assinaturaWrap">
+            <div class="linha-assinatura">Assinatura / Carimbo</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  </div>
+
+</div>
+
+<div class="rodape-app">Sistema de Cotações — guarda automaticamente no seu navegador (localStorage)</div>
+
+<!-- ============== MODAL: COTAÇÕES GUARDADAS ONLINE ============== -->
+<div class="modal-overlay" id="modalCotacoes">
+  <div class="modal-caixa">
+    <div class="modal-cabecalho">
+      <h3>📋 Cotações Guardadas Online</h3>
+      <button onclick="fecharListaCotacoes()">×</button>
+    </div>
+    <div class="modal-corpo" id="modalCorpoLista">
+      <p style="color:#777;font-size:13px;">A carregar...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ====================================================================
+   URL DO GOOGLE APPS SCRIPT — já configurado, não precisa de alteração.
+   Se um dia precisares de mudar para outra Google Sheet, troca o valor abaixo.
+   ==================================================================== */
+const URL_APPSCRIPT = "https://script.google.com/macros/s/AKfycbz0b46EKcOOB6QjAb0tbmquNWAf3zksRnReAsSavdnWhJ3Tr9i76eUsxR-QjFP43A03yA/exec";
+
+let itens = [];
+let notas = [];
+let logoDataUrl = "";
+
+const fmtMoeda = (valor, moeda) => {
+  const num = isNaN(valor) ? 0 : valor;
+  return num.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ' + moeda;
+};
+
+function novoIdItem(){
+  return 'it_' + Math.random().toString(36).slice(2,9);
+}
+function novoIdNota(){
+  return 'no_' + Math.random().toString(36).slice(2,9);
+}
+
+function adicionarItem(dados){
+  const item = dados || { id: novoIdItem(), servico:'', descricao:'', valor:'' };
+  if(!item.id) item.id = novoIdItem();
+  itens.push(item);
+  renderizarItens();
+  actualizar();
+}
+
+function removerItem(id){
+  itens = itens.filter(i => i.id !== id);
+  renderizarItens();
+  actualizar();
+}
+
+function renderizarItens(){
+  const cont = document.getElementById('listaItens');
+  cont.innerHTML = '';
+  itens.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'item-edit';
+    div.innerHTML = `
+      <span class="num-badge">${idx+1}</span>
+      <button class="remover-item" onclick="removerItem('${item.id}')">×</button>
+      <div class="campo">
+        <label>Serviço</label>
+        <input type="text" value="${escapeAttr(item.servico)}" oninput="atualizarItem('${item.id}','servico',this.value)" placeholder="Ex: Desenvolvimento da Marca Principal">
+      </div>
+      <div class="campo">
+        <label>Descrição</label>
+        <textarea oninput="atualizarItem('${item.id}','descricao',this.value)" placeholder="Descrição do serviço…">${item.descricao}</textarea>
+      </div>
+      <div class="campo">
+        <label>Valor</label>
+        <div class="campo-valor-wrap">
+          <input type="number" step="0.01" value="${item.valor}" oninput="atualizarItem('${item.id}','valor',this.value)" placeholder="0.00">
+          <span class="sufixo-moeda" id="suf-${item.id}"></span>
+        </div>
+      </div>
+    `;
+    cont.appendChild(div);
+  });
+}
+
+function atualizarItem(id, campo, valor){
+  const item = itens.find(i => i.id === id);
+  if(item){ item[campo] = valor; actualizar(); }
+}
+
+function adicionarNota(texto){
+  const nota = { id: novoIdNota(), texto: texto || '' };
+  notas.push(nota);
+  renderizarNotas();
+  actualizar();
+}
+function removerNota(id){
+  notas = notas.filter(n => n.id !== id);
+  renderizarNotas();
+  actualizar();
+}
+function renderizarNotas(){
+  const cont = document.getElementById('listaNotas');
+  cont.innerHTML = '';
+  notas.forEach((nota) => {
+    const div = document.createElement('div');
+    div.className = 'item-edit';
+    div.innerHTML = `
+      <button class="remover-item" onclick="removerNota('${nota.id}')">×</button>
+      <div class="campo">
+        <textarea oninput="atualizarNota('${nota.id}',this.value)" placeholder="Ex: Garantia de suporte durante o processo inicial…">${nota.texto}</textarea>
+      </div>
+    `;
+    cont.appendChild(div);
+  });
+}
+function atualizarNota(id, valor){
+  const nota = notas.find(n => n.id === id);
+  if(nota){ nota.texto = valor; actualizar(); }
+}
+
+function escapeAttr(str){
+  return (str || '').replace(/"/g,'&quot;');
+}
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.innerText = str || '';
+  return d.innerHTML;
+}
+
+function carregarLogo(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    logoDataUrl = e.target.result;
+    actualizar();
+  };
+  reader.readAsDataURL(file);
+}
+
+function actualizar(){
+  const moeda = document.getElementById('moeda').value || 'MZN';
+
+  // Empresa
+  document.getElementById('out-empresaNome').textContent = document.getElementById('empresaNome').value || '';
+  document.getElementById('out-empresaContacto').textContent = document.getElementById('empresaContacto').value;
+  const logoEl = document.getElementById('logoPreview');
+  if(logoDataUrl){
+    logoEl.src = logoDataUrl;
+    logoEl.style.display = 'block';
+  } else {
+    logoEl.style.display = 'none';
+  }
+
+  // Documento
+  document.getElementById('out-docTitulo').textContent = document.getElementById('docTitulo').value || 'PROPOSTA FINANCEIRA';
+  const numero = document.getElementById('docNumero').value;
+  document.getElementById('out-docNumero').textContent = numero;
+
+  // Cliente
+  document.getElementById('out-clienteNome').textContent = document.getElementById('clienteNome').value || '—';
+  const att = document.getElementById('clienteAtt').value;
+  document.getElementById('out-clienteAttWrap').style.display = att ? 'block' : 'none';
+  document.getElementById('out-clienteAtt').textContent = att;
+
+  // Objectivo
+  const mostrarObj = document.getElementById('mostrarObjectivo').checked;
+  document.getElementById('out-objectivoWrap').style.display = mostrarObj ? 'block' : 'none';
+  document.getElementById('out-objectivoTexto').textContent = document.getElementById('objectivoTexto').value;
+
+  // Tabela de itens
+  const tbody = document.getElementById('out-tabelaBody');
+  tbody.innerHTML = '';
+  let total = 0;
+  itens.forEach((item, idx) => {
+    const valorNum = parseFloat(item.valor) || 0;
+    total += valorNum;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="col-num">${idx+1}</td>
+      <td class="col-servico">${escapeHtml(item.servico)}</td>
+      <td class="col-desc">${escapeHtml(item.descricao)}</td>
+      <td class="col-valor">${fmtMoeda(valorNum, moeda)}</td>
+    `;
+    tbody.appendChild(tr);
+    const suf = document.getElementById('suf-'+item.id);
+    if(suf) suf.textContent = moeda;
+  });
+  document.getElementById('out-total').textContent = fmtMoeda(total, moeda);
+
+  // Nota
+  const mostrarNota = document.getElementById('mostrarNota').checked;
+  document.getElementById('out-notaWrap').style.display = (mostrarNota && notas.length > 0) ? 'block' : 'none';
+  document.getElementById('out-notaTitulo').textContent = document.getElementById('notaTitulo').value || 'Nota';
+  const notaLista = document.getElementById('out-notaLista');
+  notaLista.innerHTML = '';
+  notas.forEach(n => {
+    if(!n.texto) return;
+    const p = document.createElement('div');
+    p.className = 'nota-item';
+    p.textContent = '* ' + n.texto;
+    notaLista.appendChild(p);
+  });
+
+  // Rodapé
+  const local = document.getElementById('docLocal').value;
+  const dataVal = document.getElementById('docData').value;
+  let dataFormatada = '';
+  if(dataVal){
+    const d = new Date(dataVal + 'T00:00:00');
+    dataFormatada = d.toLocaleDateString('pt-PT', {day:'2-digit', month:'long', year:'numeric'});
+  }
+  const localData = [local, dataFormatada].filter(Boolean).join(', ');
+  const rodapeTexto = document.getElementById('rodapeTexto').value;
+  document.getElementById('out-rodapeTexto').innerHTML = [rodapeTexto, localData].filter(Boolean).map(t=>`<div>${escapeHtml(t)}</div>`).join('');
+
+  const mostrarAssin = document.getElementById('mostrarAssinatura').checked;
+  document.getElementById('out-assinaturaWrap').style.display = mostrarAssin ? 'block' : 'none';
+
+  guardarDadosSilencioso();
+}
+
+/* ====================================================================
+   EXPORTAÇÃO PDF — 100% VECTORIAL (jsPDF)
+   Em vez de "fotografar" o ecrã (rasterizar), desenhamos cada elemento
+   do documento — texto, linhas, tabela, caixas — directamente no PDF
+   com coordenadas e cores que espelham o CSS do #documento. Resultado:
+   texto pesquisável/selecionável, ficheiro leve, nítido a qualquer
+   zoom, e paginação automática caso a tabela seja longa.
+   Local/Data e o espaço de Assinatura saem no rodapé da última página,
+   tal como na pré-visualização.
+   ==================================================================== */
+
+// Cores replicadas das variáveis CSS (:root) — mantidas em sincronia com o style do documento
+const PDF_COR = {
+  verdeEscuro: [29, 77, 43],     // #1d4d2b
+  verde:       [46, 107, 62],    // #2e6b3e
+  verdeClaro:  [234, 243, 236],  // #eaf3ec
+  cinzaBorda:  [216, 223, 217],  // #d8dfd9
+  texto:       [34, 34, 34],     // #222
+  textoSuave:  [85, 85, 85],     // #555
+  branco:      [255, 255, 255]
+};
+
+function pdfFormatarDataLocal(){
+  const local = document.getElementById('docLocal').value;
+  const dataVal = document.getElementById('docData').value;
+  let dataFormatada = '';
+  if(dataVal){
+    const d = new Date(dataVal + 'T00:00:00');
+    dataFormatada = d.toLocaleDateString('pt-PT', {day:'2-digit', month:'long', year:'numeric'});
+  }
+  return [local, dataFormatada].filter(Boolean).join(', ');
+}
+
+async function exportarPdf(){
+  const btn = document.getElementById('btnExportarPdf');
+  const textoOriginal = btn.textContent;
+
+  if(typeof window.jspdf === 'undefined'){
+    alert('Não foi possível carregar a biblioteca de exportação de PDF. Verifica a tua ligação à internet e tenta novamente.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ A gerar PDF...';
+
+  try{
+    await new Promise(r => setTimeout(r, 20));
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+
+    const PAG_L = pdf.internal.pageSize.getWidth();   // 595.28pt = 210mm
+    const PAG_A = pdf.internal.pageSize.getHeight();  // 841.89pt = 297mm
+
+    // Margens medidas ao milímetro no PDF de referência: 15mm cada lado
+    const MARG_X    = 15 * 72/25.4;  // 15mm = 42.52pt
+    const MARG_TOPO = 17.3 * 72/25.4; // 17.3mm = 49.06pt  (topo de PROPOSTA FINANCEIRA)
+    const LARG_UTIL = PAG_L - MARG_X*2; // 180mm = 510.24pt
+
+    // Rodapé: linha cinza medida a top=282.9mm → bottom=14.1mm=40pt
+    const MARG_FUNDO = (297 - 282.9) * 72/25.4; // 14.1mm = 39.97pt
+    const LIMITE_Y   = PAG_A - MARG_FUNDO - 60;  // deixa espaço para o conteúdo do rodapé
+
+    // Larguras de colunas medidas exactamente no PDF de referência (mm→pt):
+    // Nº: 12.7mm | Serviço: 48.8mm | Descrição: 86.8mm | Valor: 31.7mm
+    const colNumL    = 12.7 * 72/25.4;  // 36.0pt
+    const colServicoL= 48.8 * 72/25.4;  // 138.3pt
+    const colDescL   = 86.8 * 72/25.4;  // 246.0pt
+    const colValL    = 31.7 * 72/25.4;  // 89.8pt
+
+    let y = MARG_TOPO;
+    let pagina = 1;
+
+    function setCor(rgb){ pdf.setTextColor(rgb[0], rgb[1], rgb[2]); }
+    function setCorTraco(rgb){ pdf.setDrawColor(rgb[0], rgb[1], rgb[2]); }
+    function setCorPreench(rgb){ pdf.setFillColor(rgb[0], rgb[1], rgb[2]); }
+
+    function novaPagina(){
+      pdf.addPage();
+      pagina++;
+      y = MARG_TOPO;
+    }
+
+    // Garante espaço disponível antes de desenhar um bloco de altura `alturaNecessaria`
+    function garantirEspaco(alturaNecessaria){
+      if(y + alturaNecessaria > LIMITE_Y){
+        novaPagina();
+        return true;
+      }
+      return false;
+    }
+
+    // Quebra texto em linhas que cabem na largura indicada
+    function quebrarTexto(texto, largura, tamanho, estilo){
+      pdf.setFont('helvetica', estilo || 'normal');
+      pdf.setFontSize(tamanho);
+      return pdf.splitTextToSize(texto || '', largura);
+    }
+
+    /* ---------- CABEÇALHO ---------- */
+    const empresaNome = document.getElementById('empresaNome').value || '';
+    const empresaContacto = document.getElementById('empresaContacto').value || '';
+    const docTitulo = document.getElementById('docTitulo').value || 'PROPOSTA FINANCEIRA';
+    const docNumero = document.getElementById('docNumero').value || '';
+
+    let xLogoTexto = MARG_X;
+    const alturaCabecalho = 64; // espelha max-height:64px do logo
+
+    if(logoDataUrl){
+      try{
+        const propsImg = pdf.getImageProperties(logoDataUrl);
+        const racioImg = propsImg.width / propsImg.height;
+        let larguraImgPt = alturaCabecalho * racioImg;
+        let alturaImgPt = alturaCabecalho;
+        if(larguraImgPt > 130){
+          larguraImgPt = 130;
+          alturaImgPt = 130 / racioImg;
+        }
+        const yLogo = y + (alturaCabecalho - alturaImgPt)/2;
+        pdf.addImage(logoDataUrl, propsImg.fileType || 'PNG', MARG_X, yLogo, larguraImgPt, alturaImgPt);
+        xLogoTexto = MARG_X + larguraImgPt + 14;
+      }catch(e){ /* se o logo falhar a desenhar, segue sem ele */ }
+    }
+
+    setCor(PDF_COR.verdeEscuro);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14.5);
+    pdf.text(empresaNome, xLogoTexto, y + 16);
+
+    if(empresaContacto){
+      setCor(PDF_COR.textoSuave);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8.5);
+      const linhasContacto = empresaContacto.split('\n');
+      linhasContacto.forEach((linha, i) => {
+        pdf.text(linha, xLogoTexto, y + 30 + i*11);
+      });
+    }
+
+    // Título à direita
+    setCor(PDF_COR.verdeEscuro);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(19);
+    pdf.text(docTitulo, PAG_L - MARG_X, y + 18, { align: 'right' });
+
+    /* Mede a posição real da linha no editor (pré-visualização) para que o PDF
+       fique sempre com a mesma distância que se vê no ecrã — inclui o ajuste de
+       3mm pedido e também o caso de não haver logótipo (cabeçalho mais baixo) */
+    const elDocumento = document.getElementById('documento');
+    const elHeaderPreview = document.querySelector('.doc-header');
+    const PX_PARA_PT = 72/96; // 1px do ecrã (96dpi) = 0.75pt do PDF (72dpi) — mesma escala física
+    const yLinhaCabecalho = (elHeaderPreview.getBoundingClientRect().bottom - elDocumento.getBoundingClientRect().top) * PX_PARA_PT;
+
+    setCorTraco(PDF_COR.verdeEscuro);
+    pdf.setLineWidth(2.2);
+    pdf.line(MARG_X, yLinhaCabecalho, PAG_L - MARG_X, yLinhaCabecalho);
+    y = yLinhaCabecalho + 24;
+
+    /* ---------- DADOS DO CLIENTE ---------- */
+    const clienteNome = document.getElementById('clienteNome').value || '—';
+    const clienteAtt = document.getElementById('clienteAtt').value || '';
+
+    pdf.setFontSize(10.5);
+    setCor(PDF_COR.verdeEscuro);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Entidade:', MARG_X, y);
+    const wEntidade = pdf.getTextWidth('Entidade:');
+    pdf.setFont('helvetica', 'normal');
+    const wEspaco = pdf.getTextWidth(' ');
+    setCor(PDF_COR.texto);
+    pdf.text(clienteNome, MARG_X + wEntidade + wEspaco, y);
+    y += 17;
+
+    if(clienteAtt){
+      setCor(PDF_COR.verdeEscuro);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Att:', MARG_X + 30, y);
+      const wAtt = pdf.getTextWidth('Att:');
+      pdf.setFont('helvetica', 'normal');
+      const wEspacoAtt = pdf.getTextWidth(' ');
+      setCor(PDF_COR.texto);
+      pdf.text(clienteAtt, MARG_X + 30 + wAtt + wEspacoAtt, y);
+      y += 17;
+    }
+    y += 6;
+
+    /* ---------- OBJECTIVO DO PROJECTO ---------- */
+    const mostrarObj = document.getElementById('mostrarObjectivo').checked;
+    const objectivoTexto = document.getElementById('objectivoTexto').value || '';
+    if(mostrarObj && objectivoTexto){
+      setCor(PDF_COR.verdeEscuro);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11.5);
+      pdf.text('Objectivo do projecto', MARG_X, y);
+      y += 14;
+
+      setCor(PDF_COR.texto);
+      const linhasObj = quebrarTexto(objectivoTexto, LARG_UTIL, 9.5, 'normal');
+      garantirEspaco(linhasObj.length * 13);
+      linhasObj.forEach(linha => {
+        pdf.text(linha, MARG_X, y);
+        y += 13;
+      });
+      y += 12;
+    }
+
+    /* ---------- TABELA DE ITENS ---------- */
+    const moeda = document.getElementById('moeda').value || 'MZN';
+    const xNum = MARG_X, xServico = xNum+colNumL, xDesc = xServico+colServicoL, xValor = xDesc+colDescL;
+
+    function desenharCabecalhoTabela(){
+      // Header height = 8.5mm = 24.1pt (medido no PDF de referência)
+      const HDR_H = 8.5 * 72/25.4;
+      setCorPreench(PDF_COR.verdeEscuro);
+      pdf.rect(MARG_X, y, LARG_UTIL, HDR_H, 'F');
+      setCor(PDF_COR.branco);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(9.5);
+      pdf.text('Nº',        xNum     + colNumL/2,     y + HDR_H/2 + 3, {align:'center'});
+      pdf.text('Serviço',   xServico + colServicoL/2, y + HDR_H/2 + 3, {align:'center'});
+      pdf.text('Descrição', xDesc    + colDescL/2,    y + HDR_H/2 + 3, {align:'center'});
+      pdf.text('Valor',     xValor   + colValL/2,     y + HDR_H/2 + 3, {align:'center'});
+      y += HDR_H;
+    }
+
+    garantirEspaco(8.5 * 72/25.4 + 30);
+    desenharCabecalhoTabela();
+
+    let total = 0;
+    pdf.setFontSize(9);
+
+    itens.forEach((item, idx) => {
+      const valorNum = parseFloat(item.valor) || 0;
+      total += valorNum;
+
+      const linhasServico = quebrarTexto(item.servico || '', colServicoL - 12, 9, 'bold');
+      const linhasDesc = quebrarTexto(item.descricao || '', colDescL - 12, 9, 'normal');
+      const nLinhas = Math.max(linhasServico.length, linhasDesc.length, 1);
+      // Altura mínima de linha = 12.7mm = 36pt (medida no PDF de referência)
+      const ROW_MIN = 12.7 * 72/25.4;
+      const alturaLinha = Math.max(ROW_MIN, nLinhas*11 + 14);
+
+      const quebrou = garantirEspaco(alturaLinha);
+      if(quebrou){ desenharCabecalhoTabela(); }
+
+      setCorTraco(PDF_COR.cinzaBorda);
+      pdf.setLineWidth(0.6);
+      pdf.rect(MARG_X, y, LARG_UTIL, alturaLinha);
+      pdf.line(xServico, y, xServico, y+alturaLinha);
+      pdf.line(xDesc, y, xDesc, y+alturaLinha);
+      pdf.line(xValor, y, xValor, y+alturaLinha);
+
+      const yTextoMeio = y + alturaLinha/2 - (nLinhas-1)*5.5 + 3;
+
+      setCor(PDF_COR.verdeEscuro);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(9.5);
+      pdf.text(String(idx+1), xNum + colNumL/2, y + alturaLinha/2 + 3, {align:'center'});
+
+      pdf.setFontSize(9);
+      setCor(PDF_COR.texto);
+      pdf.setFont('helvetica', 'bold');
+      linhasServico.forEach((linha,i)=> pdf.text(linha, xServico + colServicoL/2, yTextoMeio + i*11, {align:'center'}));
+
+      setCor([68,68,68]);
+      pdf.setFont('helvetica', 'normal');
+      linhasDesc.forEach((linha,i)=> pdf.text(linha, xDesc + colDescL/2, yTextoMeio + i*11, {align:'center'}));
+
+      setCor(PDF_COR.texto);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(fmtMoeda(valorNum, moeda), xValor + colValL/2, y + alturaLinha/2 + 3, {align:'center'});
+
+      y += alturaLinha;
+    });
+
+    /* ---------- TOTAL GERAL: height=12mm=34pt (medido no PDF) ---------- */
+    const TOTAL_H = 12.0 * 72/25.4; // 34pt
+    garantirEspaco(TOTAL_H);
+    setCorTraco(PDF_COR.cinzaBorda);
+    pdf.setLineWidth(0.6);
+    pdf.rect(MARG_X, y, LARG_UTIL, TOTAL_H);
+    setCor(PDF_COR.verdeEscuro);
+    pdf.setFont('helvetica', 'bold');
+    const totalTxt = 'Total Geral';
+    const montanteTxt = fmtMoeda(total, moeda);
+    pdf.setFontSize(11.5);
+    const wMontante = pdf.getTextWidth(montanteTxt);
+    pdf.setFontSize(10.5);
+    const wTotalTxt = pdf.getTextWidth(totalTxt);
+    const xFinalBloco = PAG_L - MARG_X - 10;
+    pdf.text(totalTxt, xFinalBloco - wMontante - 12 - wTotalTxt, y + TOTAL_H/2 + 3);
+    pdf.setFontSize(11.5);
+    pdf.text(montanteTxt, xFinalBloco, y + TOTAL_H/2 + 3, {align:'right'});
+    // Nota: top=103.6mm, Total bot=90.9mm → margin=12.7mm=36pt
+    y += TOTAL_H + (12.7 * 72/25.4);
+
+    /* ---------- NOTA / CONDIÇÕES ---------- */
+    const mostrarNota = document.getElementById('mostrarNota').checked;
+    if(mostrarNota && notas.length > 0 && notas.some(n=>n.texto)){
+      const notaTitulo = document.getElementById('notaTitulo').value || 'Nota';
+
+      const blocosNota = notas.filter(n=>n.texto).map(n => quebrarTexto('* ' + n.texto, LARG_UTIL - 24, 8.5, 'normal'));
+      const alturaTextoNotas = blocosNota.reduce((acc,linhas)=> acc + linhas.length*11.5 + 5, 0);
+      const alturaCaixa = 14 + 16 + alturaTextoNotas;
+
+      garantirEspaco(alturaCaixa);
+      setCorPreench(PDF_COR.verdeClaro);
+      setCorTraco([207,226,211]);
+      pdf.setLineWidth(0.7);
+      pdf.roundedRect(MARG_X, y, LARG_UTIL, alturaCaixa, 3, 3, 'FD');
+
+      setCor(PDF_COR.verdeEscuro);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(9.5);
+      pdf.text(notaTitulo, MARG_X+12, y+16);
+
+      let yNota = y + 16 + 14;
+      setCor([58,58,58]);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8.5);
+      blocosNota.forEach(linhas => {
+        linhas.forEach(linha => { pdf.text(linha, MARG_X+12, yNota); yNota += 11.5; });
+        yNota += 5;
+      });
+
+      y += alturaCaixa + 26;
+    } else {
+      y += 10;
+    }
+
+    /* ---------- RODAPÉ: posições medidas ao mm no PDF de referência ----------
+       Linha cinza:  top=282.9mm → y = 282.9*72/25.4 = 801.0pt
+       Número:       top=278.0mm → y = 278.0*72/25.4 = 787.1pt  (acima da linha)
+       Data/texto:   top=286.3mm → y = 286.3*72/25.4 = 811.4pt  (abaixo da linha)
+    ---------------------------------------------------------------- */
+    const yLinhaRodape = 282.9 * 72/25.4;  // 801.0pt
+    const yNumRodape   = 278.0 * 72/25.4;  // 787.1pt
+    const yDataRodape  = 286.3 * 72/25.4;  // 811.4pt
+
+    const rodapeTexto = document.getElementById('rodapeTexto').value || '';
+    const localData   = pdfFormatarDataLocal();
+    const mostrarAssin = document.getElementById('mostrarAssinatura').checked;
+    const linhasRodapeEsq = [rodapeTexto, localData].filter(Boolean);
+
+    // Número (acima da linha)
+    if(docNumero){
+      setCor(PDF_COR.textoSuave);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8.5);
+      pdf.text(docNumero, MARG_X, yNumRodape);
+    }
+
+    // Linha cinza separadora
+    setCorTraco(PDF_COR.cinzaBorda);
+    pdf.setLineWidth(0.7);
+    pdf.line(MARG_X, yLinhaRodape, PAG_L - MARG_X, yLinhaRodape);
+
+    // Texto/data (abaixo da linha)
+    setCor(PDF_COR.textoSuave);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.5);
+    linhasRodapeEsq.forEach((linha, i) => {
+      pdf.text(linha, MARG_X, yDataRodape + i*12);
+    });
+
+    // Assinatura (direita, abaixo da linha)
+    if(mostrarAssin){
+      const xAssinCentro = PAG_L - MARG_X - 85;
+      const yLinhaAssin  = yDataRodape + 28;
+      setCorTraco([153,153,153]);
+      pdf.setLineWidth(0.7);
+      pdf.line(xAssinCentro - 85, yLinhaAssin, xAssinCentro + 85, yLinhaAssin);
+      setCor(PDF_COR.textoSuave);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.text('Assinatura / Carimbo', xAssinCentro, yLinhaAssin + 10, {align:'center'});
+    }
+
+    /* ---------- NOME DO FICHEIRO ---------- */
+    const numeroDoc = (docNumero || '').trim();
+    const nomeBase = ((clienteNome === '—' ? 'documento' : clienteNome) + (numeroDoc ? '_' + numeroDoc : ''))
+      .replace(/[^a-zA-Z0-9_\- ]/g, '')
+      .replace(/\s+/g, '_')
+      .slice(0, 60) || 'cotacao';
+
+    pdf.save(nomeBase + '.pdf');
+  }catch(erro){
+    alert('Não foi possível gerar o PDF.\n\nErro técnico: ' + erro);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = textoOriginal;
+  }
+}
+
+function coletarEstado(){
+  return {
+    empresaNome: document.getElementById('empresaNome').value,
+    empresaContacto: document.getElementById('empresaContacto').value,
+    docTitulo: document.getElementById('docTitulo').value,
+    docNumero: document.getElementById('docNumero').value,
+    docLocal: document.getElementById('docLocal').value,
+    docData: document.getElementById('docData').value,
+    clienteNome: document.getElementById('clienteNome').value,
+    clienteAtt: document.getElementById('clienteAtt').value,
+    mostrarObjectivo: document.getElementById('mostrarObjectivo').checked,
+    objectivoTexto: document.getElementById('objectivoTexto').value,
+    moeda: document.getElementById('moeda').value,
+    mostrarNota: document.getElementById('mostrarNota').checked,
+    notaTitulo: document.getElementById('notaTitulo').value,
+    mostrarAssinatura: document.getElementById('mostrarAssinatura').checked,
+    rodapeTexto: document.getElementById('rodapeTexto').value,
+    itens, notas, logoDataUrl
+  };
+}
+
+function guardarDadosSilencioso(){
+  try{
+    localStorage.setItem('cotacao_estado_v1', JSON.stringify(coletarEstado()));
+  }catch(e){ /* localStorage pode falhar em alguns contextos - ignorar silenciosamente */ }
+}
+
+function guardarDados(){
+  guardarDadosSilencioso();
+  alert('Dados guardados com sucesso neste navegador!');
+}
+
+function limparTudo(){
+  if(!confirm('Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.')) return;
+  try{ localStorage.removeItem('cotacao_estado_v1'); }catch(e){}
+  itens = [];
+  notas = [];
+  logoDataUrl = '';
+  document.getElementById('empresaNome').value = '';
+  document.getElementById('empresaContacto').value = '';
+  document.getElementById('docTitulo').value = 'PROPOSTA FINANCEIRA';
+  document.getElementById('docNumero').value = '';
+  document.getElementById('docLocal').value = '';
+  document.getElementById('docData').value = '';
+  document.getElementById('clienteNome').value = '';
+  document.getElementById('clienteAtt').value = '';
+  document.getElementById('mostrarObjectivo').checked = true;
+  document.getElementById('objectivoTexto').value = '';
+  document.getElementById('moeda').value = 'MZN';
+  document.getElementById('mostrarNota').checked = true;
+  document.getElementById('notaTitulo').value = 'Nota';
+  document.getElementById('mostrarAssinatura').checked = true;
+  document.getElementById('rodapeTexto').value = '';
+  document.getElementById('inputLogo').value = '';
+  renderizarItens();
+  renderizarNotas();
+  actualizar();
+}
+
+function carregarEstadoGuardado(){
+  let estado = null;
+  try{
+    const raw = localStorage.getItem('cotacao_estado_v1');
+    if(raw) estado = JSON.parse(raw);
+  }catch(e){ estado = null; }
+
+  if(!estado){
+    // Estado inicial de exemplo (baseado no documento de referência)
+    document.getElementById('docData').valueAsDate = new Date();
+    adicionarItem({id:novoIdItem(), servico:'Desenvolvimento da Marca Principal', descricao:'Criação e desenvolvimento da identidade visual principal da empresa', valor:'4000'});
+    adicionarItem({id:novoIdItem(), servico:'Desenvolvimento das Marcas dos Produtos', descricao:'Criação das identidades visuais dos produtos', valor:'4500'});
+    adicionarItem({id:novoIdItem(), servico:'Design de Packaging e Rótulos', descricao:'Desenvolvimento dos rótulos e embalagens dos produtos', valor:'3000'});
+    adicionarNota('Garantirei suporte durante o processo inicial de produção dos materiais, assegurando o correto acompanhamento da aplicação visual da marca.');
+    adicionarNota('O cliente terá acesso completo a todas as artes finais em alta qualidade, devidamente preparadas para impressão e produção futura.');
+    actualizar();
+    verificarLigacaoOnline();
+    return;
+  }
+
+  document.getElementById('empresaNome').value = estado.empresaNome || '';
+  document.getElementById('empresaContacto').value = estado.empresaContacto || '';
+  document.getElementById('docTitulo').value = estado.docTitulo || 'PROPOSTA FINANCEIRA';
+  document.getElementById('docNumero').value = estado.docNumero || '';
+  document.getElementById('docLocal').value = estado.docLocal || '';
+  document.getElementById('docData').value = estado.docData || '';
+  document.getElementById('clienteNome').value = estado.clienteNome || '';
+  document.getElementById('clienteAtt').value = estado.clienteAtt || '';
+  document.getElementById('mostrarObjectivo').checked = estado.mostrarObjectivo !== false;
+  document.getElementById('objectivoTexto').value = estado.objectivoTexto || '';
+  document.getElementById('moeda').value = estado.moeda || 'MZN';
+  document.getElementById('mostrarNota').checked = estado.mostrarNota !== false;
+  document.getElementById('notaTitulo').value = estado.notaTitulo || 'Nota';
+  document.getElementById('mostrarAssinatura').checked = estado.mostrarAssinatura !== false;
+  document.getElementById('rodapeTexto').value = estado.rodapeTexto || '';
+  logoDataUrl = estado.logoDataUrl || '';
+
+  itens = estado.itens || [];
+  notas = estado.notas || [];
+  renderizarItens();
+  renderizarNotas();
+  actualizar();
+
+  verificarLigacaoOnline();
+}
+
+/* ====================================================================
+   INTEGRAÇÃO COM GOOGLE APPS SCRIPT (Google Sheets online)
+   ==================================================================== */
+
+function obterUrlScript(){
+  return URL_APPSCRIPT.trim();
+}
+
+function verificarLigacaoOnline(){
+  const url = obterUrlScript();
+  if(!url){
+    atualizarStatusConexao('vazio', '⚪ Nenhum URL configurado ainda');
+  } else if(!url.includes('script.google.com')){
+    atualizarStatusConexao('erro', '🔴 O URL configurado no código não parece válido');
+  } else {
+    atualizarStatusConexao('ok', '🟢 Ligado ao Google Sheets — pronto para guardar online');
+  }
+}
+
+function atualizarStatusConexao(tipo, texto){
+  const el = document.getElementById('statusConexao');
+  el.className = 'status-conexao status-' + tipo;
+  el.textContent = texto;
+}
+
+async function guardarCotacaoOnline(){
+  const url = obterUrlScript();
+  if(!url){
+    alert('Por favor, cola primeiro o URL do Google Apps Script no campo "Ligação Online" (topo do painel esquerdo).\n\nSe ainda não criaste o script, segue as instruções no ficheiro Code.gs fornecido.');
+    return;
+  }
+  if(itens.length === 0){
+    alert('Adiciona pelo menos um item à cotação antes de guardar.');
+    return;
+  }
+
+  const btn = document.getElementById('btnGuardarOnline');
+  const textoOriginal = btn.textContent;
+  btn.textContent = '⏳ A guardar...';
+  btn.disabled = true;
+  atualizarStatusConexao('aguardar', '🟡 A enviar para o Google Sheets...');
+
+  const payload = {
+    accao: 'gravar',
+    docTitulo: document.getElementById('docTitulo').value,
+    docNumero: document.getElementById('docNumero').value,
+    clienteNome: document.getElementById('clienteNome').value,
+    clienteAtt: document.getElementById('clienteAtt').value,
+    docLocal: document.getElementById('docLocal').value,
+    docData: document.getElementById('docData').value,
+    objectivoTexto: document.getElementById('objectivoTexto').value,
+    itens: itens,
+    notas: notas,
+    moeda: document.getElementById('moeda').value,
+    empresaNome: document.getElementById('empresaNome').value
+  };
+
+  try{
+    // O Apps Script Web App normalmente não devolve cabeçalhos CORS legíveis,
+    // por isso usamos modo "no-cors": o pedido é enviado e processado no servidor,
+    // mas não conseguimos ler a resposta diretamente no browser.
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+
+    atualizarStatusConexao('ok', '🟢 Cotação enviada! Verifica a tua Google Sheet.');
+    alert('Cotação enviada para o Google Sheets com sucesso!\n\n(Se for a primeira vez, confirma na folha de cálculo que a linha apareceu.)');
+  }catch(erro){
+    atualizarStatusConexao('erro', '🔴 Falha ao enviar — verifica o URL e a ligação à internet');
+    alert('Não foi possível enviar a cotação. Verifica:\n\n1. Se o URL está correto e termina em /exec\n2. Se a implementação está activa ("Qualquer pessoa" tem acesso)\n3. Se tens ligação à internet\n\nErro técnico: ' + erro);
+  }finally{
+    btn.textContent = textoOriginal;
+    btn.disabled = false;
+  }
+}
+
+async function abrirListaCotacoes(){
+  const url = obterUrlScript();
+  const modal = document.getElementById('modalCotacoes');
+  const corpo = document.getElementById('modalCorpoLista');
+
+  if(!url){
+    alert('Configura primeiro o URL do Google Apps Script no painel esquerdo.');
+    return;
+  }
+
+  modal.classList.add('aberto');
+  corpo.innerHTML = '<p style="color:#777;font-size:13px;">A carregar cotações...</p>';
+
+  try{
+    const resp = await fetch(url + '?accao=listar');
+    const dados = await resp.json();
+
+    if(!dados.sucesso){
+      corpo.innerHTML = '<p style="color:#a83232;font-size:13px;">Erro: ' + escapeHtml(dados.erro || 'desconhecido') + '</p>';
+      return;
+    }
+
+    if(!dados.cotacoes || dados.cotacoes.length === 0){
+      corpo.innerHTML = '<p style="color:#777;font-size:13px;">Ainda não há cotações guardadas online.</p>';
+      return;
+    }
+
+    corpo.innerHTML = '';
+    dados.cotacoes.forEach(cot => {
+      const div = document.createElement('div');
+      div.className = 'cotacao-linha';
+      const dataReg = cot['Data de Registo'] ? new Date(cot['Data de Registo']).toLocaleDateString('pt-PT') : '';
+      const moedaCot = cot['Moeda'] || 'MZN';
+      const totalCot = parseFloat(cot['Total']) || 0;
+      div.innerHTML = `
+        <div class="info">
+          <b>${escapeHtml(cot['Cliente'] || 'Sem nome')}</b>
+          <span>${escapeHtml(cot['Tipo de Documento'] || '')} ${cot['Número'] ? '· ' + escapeHtml(cot['Número']) : ''} · ${dataReg}</span>
+        </div>
+        <div class="valor-total">${fmtMoeda(totalCot, moedaCot)}</div>
+        <button onclick='carregarCotacaoDaLista(${JSON.stringify(JSON.stringify(cot)).replace(/'/g,"&#39;")})'>Abrir</button>
+      `;
+      corpo.appendChild(div);
+    });
+  }catch(erro){
+    corpo.innerHTML = '<p style="color:#a83232;font-size:13px;">Não foi possível ligar ao Google Sheets. Verifica o URL.<br><br>Erro técnico: ' + escapeHtml(String(erro)) + '</p>';
+  }
+}
+
+function fecharListaCotacoes(){
+  document.getElementById('modalCotacoes').classList.remove('aberto');
+}
+
+function carregarCotacaoDaLista(jsonStr){
+  try{
+    const cot = JSON.parse(jsonStr);
+
+    document.getElementById('docTitulo').value = cot['Tipo de Documento'] || 'PROPOSTA FINANCEIRA';
+    document.getElementById('docNumero').value = cot['Número'] || '';
+    document.getElementById('clienteNome').value = cot['Cliente'] || '';
+    document.getElementById('clienteAtt').value = cot['Att.'] || '';
+    document.getElementById('docLocal').value = cot['Local'] || '';
+    document.getElementById('objectivoTexto').value = cot['Objectivo do Projecto'] || '';
+    document.getElementById('moeda').value = cot['Moeda'] || 'MZN';
+    document.getElementById('empresaNome').value = cot['Empresa'] || document.getElementById('empresaNome').value;
+
+    try{ itens = JSON.parse(cot['Itens (JSON)'] || '[]'); }catch(e){ itens = []; }
+    try{ notas = JSON.parse(cot['Notas (JSON)'] || '[]'); }catch(e){ notas = []; }
+
+    itens.forEach(it => { if(!it.id) it.id = novoIdItem(); });
+    notas.forEach(n => { if(!n.id) n.id = novoIdNota(); });
+
+    renderizarItens();
+    renderizarNotas();
+    actualizar();
+    fecharListaCotacoes();
+  }catch(erro){
+    alert('Não foi possível carregar esta cotação.');
+  }
+}
+
+
+window.addEventListener('DOMContentLoaded', carregarEstadoGuardado);
+
+/* ====================================================================
+   EXPORTAÇÃO SVG — captura o #documento tal como está no ecrã e
+   incorpora todos os estilos CSS inline + imagens em base64.
+   O resultado é um ficheiro .svg fiel à pré-visualização, escalável
+   a qualquer resolução e abrível em qualquer browser ou editor vectorial.
+   ==================================================================== */
+async function exportarSvg(){
+  const btn = document.getElementById('btnExportarSvg');
+  const textoOriginal = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ A gerar SVG...';
+
+  try{
+    const doc = document.getElementById('documento');
+
+    // Clona o documento para não alterar o original
+    const clone = doc.cloneNode(true);
+
+    // Dimensões reais do elemento
+    const largura = doc.offsetWidth;
+    const altura = doc.scrollHeight; // scrollHeight apanha conteúdo longo
+
+    // Aplica estilos computados inline a cada elemento do clone
+    function aplicarEstilosInline(origem, destino){
+      const estiloComputado = window.getComputedStyle(origem);
+      const relevante = [
+        'font-family','font-size','font-weight','font-style',
+        'color','background-color','border','border-top','border-right','border-bottom','border-left',
+        'border-color','border-width','border-style','border-radius','border-collapse',
+        'padding','padding-top','padding-right','padding-bottom','padding-left',
+        'margin','margin-top','margin-right','margin-bottom','margin-left',
+        'display','flex-direction','justify-content','align-items','gap','flex-wrap',
+        'width','height','min-height','max-width','max-height',
+        'position','top','right','bottom','left','z-index',
+        'text-align','line-height','letter-spacing','text-transform','white-space',
+        'overflow','overflow-x','overflow-y',
+        'box-shadow','opacity','vertical-align',
+        'grid-template-columns','grid-template-rows','grid-gap','column-gap','row-gap',
+        'word-wrap','word-break','text-decoration',
+        'page-break-inside','break-inside'
+      ];
+      let estilo = '';
+      relevante.forEach(prop => {
+        const val = estiloComputado.getPropertyValue(prop);
+        if(val && val !== ''){
+          estilo += prop + ':' + val + ';';
+        }
+      });
+      destino.style.cssText = estilo;
+
+      const filhosOrigem = origem.children;
+      const filhosDestino = destino.children;
+      for(let i = 0; i < filhosOrigem.length; i++){
+        if(filhosDestino[i]) aplicarEstilosInline(filhosOrigem[i], filhosDestino[i]);
+      }
+    }
+
+    aplicarEstilosInline(doc, clone);
+
+    // Converte imagens src para base64 (logo)
+    const imgs = clone.querySelectorAll('img');
+    await Promise.all(Array.from(imgs).map(async img => {
+      if(!img.src || img.src.startsWith('data:')) return;
+      try{
+        const resp = await fetch(img.src);
+        const blob = await resp.blob();
+        const b64 = await new Promise(res => {
+          const fr = new FileReader();
+          fr.onload = e => res(e.target.result);
+          fr.readAsDataURL(blob);
+        });
+        img.src = b64;
+      }catch(e){ /* ignora se nao conseguir */ }
+    }));
+
+    // Serializa o clone para HTML
+    const htmlClone = clone.outerHTML;
+
+    // Monta o SVG com um foreignObject a englobar o HTML
+    const svgStr = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<svg xmlns="http://www.w3.org/2000/svg"\n' +
+      '     xmlns:xhtml="http://www.w3.org/1999/xhtml"\n' +
+      '     width="' + largura + '" height="' + altura + '"\n' +
+      '     viewBox="0 0 ' + largura + ' ' + altura + '">\n' +
+      '  <rect width="' + largura + '" height="' + altura + '" fill="white"/>\n' +
+      '  <foreignObject width="' + largura + '" height="' + altura + '" x="0" y="0">\n' +
+      '    <div xmlns="http://www.w3.org/1999/xhtml"\n' +
+      '         style="width:' + largura + 'px;min-height:' + altura + 'px;margin:0;padding:0;box-sizing:border-box;background:white;">\n' +
+      htmlClone + '\n' +
+      '    </div>\n' +
+      '  </foreignObject>\n' +
+      '</svg>';
+
+    // Determina nome do ficheiro (igual ao PDF)
+    const clienteNome = (document.getElementById('clienteNome').value || 'documento').replace(/[^a-zA-Z0-9_\- ]/g,'').replace(/\s+/g,'_').slice(0,60) || 'cotacao';
+    const docNumero = (document.getElementById('docNumero').value || '').trim().replace(/[^a-zA-Z0-9_\-]/g,'');
+    const nomeBase = clienteNome + (docNumero ? '_' + docNumero : '');
+
+    // Descarrega
+    const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeBase + '.svg';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+
+  }catch(erro){
+    alert('Nao foi possivel gerar o SVG.\n\nErro tecnico: ' + erro);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = textoOriginal;
+  }
+}
+</script>
+
+</body>
+</html>
