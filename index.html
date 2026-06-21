@@ -1059,6 +1059,34 @@ async function exportarPdf(){
       return pdf.splitTextToSize(texto || '', largura);
     }
 
+    // Desenha um conjunto de linhas (já quebradas via quebrarTexto) com alinhamento
+    // justificado em bloco, espalhando o espaço extra entre as palavras.
+    // A última linha do bloco fica alinhada à esquerda (regra padrão de justificação).
+    function desenharLinhasJustificadas(linhas, x, yInicial, largura, alturaLinha){
+      let yAtual = yInicial;
+      linhas.forEach((linha, idx) => {
+        const ehUltima = idx === linhas.length - 1;
+        const palavras = linha.split(' ').filter(p => p.length > 0);
+
+        if(ehUltima || palavras.length <= 1){
+          pdf.text(linha, x, yAtual);
+        }else{
+          const larguraTexto = pdf.getTextWidth(palavras.join(' '));
+          const espacoExtra = largura - larguraTexto;
+          const espacoEntrePalavras = espacoExtra / (palavras.length - 1);
+          const larguraEspacoNormal = pdf.getTextWidth(' ');
+
+          let xAtual = x;
+          palavras.forEach((palavra) => {
+            pdf.text(palavra, xAtual, yAtual);
+            xAtual += pdf.getTextWidth(palavra) + larguraEspacoNormal + espacoEntrePalavras;
+          });
+        }
+        yAtual += alturaLinha;
+      });
+      return yAtual;
+    }
+
     /* ---------- CABEÇALHO ---------- */
     const empresaNome = document.getElementById('empresaNome').value || '';
     const empresaContacto = document.getElementById('empresaContacto').value || '';
@@ -1281,7 +1309,7 @@ async function exportarPdf(){
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(8.5);
       blocosNota.forEach(linhas => {
-        linhas.forEach(linha => { pdf.text(linha, MARG_X+12, yNota); yNota += 11.5; });
+        yNota = desenharLinhasJustificadas(linhas, MARG_X+12, yNota, LARG_UTIL - 24, 11.5);
         yNota += 5;
       });
 
