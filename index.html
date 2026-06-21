@@ -586,18 +586,6 @@
       <button class="btn-add-item" style="border-color:#3a7a4a;background:#eaf3ec;color:#1d4d2b;" onclick="abrirListaCotacoes()">📋 Ver Cotações Guardadas Online</button>
     </div>
 
-    <h2>👤 Dados do Utilizador (Quem Cria)</h2>
-    <div class="linha-dupla">
-      <div class="campo">
-        <label>Email do Utilizador</label>
-        <input type="text" id="utilizadorEmail" placeholder="utilizador@empresa.co.mz" oninput="actualizar()">
-      </div>
-      <div class="campo">
-        <label>Telefone do Utilizador</label>
-        <input type="text" id="utilizadorTelefone" placeholder="84 000 0000" oninput="actualizar()">
-      </div>
-    </div>
-
     <h2>Dados da Sua Empresa</h2>
     <div class="campo">
       <label>Logótipo (opcional)</label>
@@ -607,23 +595,9 @@
       <label>Nome da Empresa</label>
       <input type="text" id="empresaNome" placeholder="Ex: Sua Empresa, Lda" oninput="actualizar()">
     </div>
-    <div class="linha-dupla">
-      <div class="campo">
-        <label>Email da Empresa</label>
-        <input type="text" id="empresaEmail" placeholder="geral@empresa.co.mz" oninput="actualizar()">
-      </div>
-      <div class="campo">
-        <label>Telefone da Empresa</label>
-        <input type="text" id="empresaTelefone" placeholder="84 000 0000" oninput="actualizar()">
-      </div>
-    </div>
     <div class="campo">
-      <label>NUIT da Empresa</label>
-      <input type="text" id="empresaNuit" placeholder="Ex: 400123456" oninput="actualizar()">
-    </div>
-    <div class="campo">
-      <label>Outros Contactos (endereço, website…)</label>
-      <textarea id="empresaContacto" placeholder="Av. 25 de Setembro, Maputo&#10;www.empresa.co.mz" oninput="actualizar()"></textarea>
+      <label>Dados de Contacto (telefone, email, NUIT, endereço…)</label>
+      <textarea id="empresaContacto" placeholder="Tel: 84 000 0000 | email@empresa.co.mz&#10;NUIT: 000000000" oninput="actualizar()"></textarea>
     </div>
 
     <h2>Dados do Documento</h2>
@@ -633,12 +607,8 @@
         <input type="text" id="docTitulo" value="PROPOSTA FINANCEIRA" oninput="actualizar()">
       </div>
       <div class="campo">
-        <label>Número do Documento</label>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <input type="text" id="docNumero" placeholder="Auto" oninput="actualizar()" style="flex:1;">
-          <button onclick="gerarNumeroAuto()" title="Gerar número automático" style="background:var(--verde-escuro);color:#fff;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;">🔢 Auto</button>
-        </div>
-        <div style="font-size:11px;color:var(--texto-suave);margin-top:3px;">Deixa vazio para numerar automaticamente ao guardar online.</div>
+        <label>Número (opcional)</label>
+        <input type="text" id="docNumero" placeholder="Nº 001/2026" oninput="actualizar()">
       </div>
     </div>
     <div class="campo">
@@ -657,26 +627,6 @@
     <div class="campo">
       <label>Att. (pessoa de contacto) — opcional</label>
       <input type="text" id="clienteAtt" placeholder="Ex: José Luís" oninput="actualizar()">
-    </div>
-    <div class="linha-dupla">
-      <div class="campo">
-        <label>Email do Cliente</label>
-        <input type="text" id="clienteEmail" placeholder="cliente@empresa.co.mz" oninput="actualizar()">
-      </div>
-      <div class="campo">
-        <label>Telefone do Cliente</label>
-        <input type="text" id="clienteTelefone" placeholder="84 000 0000" oninput="actualizar()">
-      </div>
-    </div>
-    <div class="linha-dupla">
-      <div class="campo">
-        <label>NUIT do Cliente</label>
-        <input type="text" id="clienteNuit" placeholder="Ex: 400000000" oninput="actualizar()">
-      </div>
-      <div class="campo">
-        <label>Endereço do Cliente</label>
-        <input type="text" id="clienteEndereco" placeholder="Ex: Av. Eduardo Mondlane, Maputo" oninput="actualizar()">
-      </div>
     </div>
 
     <h2>Objectivo do Projecto</h2>
@@ -933,17 +883,7 @@ function actualizar(){
 
   // Empresa
   document.getElementById('out-empresaNome').textContent = document.getElementById('empresaNome').value || '';
-  // Monta bloco de contacto da empresa: email, telefone, NUIT, outros
-  const empEmail = document.getElementById('empresaEmail').value;
-  const empTel   = document.getElementById('empresaTelefone').value;
-  const empNuit  = document.getElementById('empresaNuit').value;
-  const empOutros = document.getElementById('empresaContacto').value;
-  const linhasContacto = [];
-  if(empEmail)  linhasContacto.push('✉ ' + empEmail);
-  if(empTel)    linhasContacto.push('📞 ' + empTel);
-  if(empNuit)   linhasContacto.push('NUIT: ' + empNuit);
-  if(empOutros) linhasContacto.push(empOutros);
-  document.getElementById('out-empresaContacto').textContent = linhasContacto.join('\n');
+  document.getElementById('out-empresaContacto').textContent = document.getElementById('empresaContacto').value;
   const logoEl = document.getElementById('logoPreview');
   if(logoDataUrl){
     logoEl.src = logoDataUrl;
@@ -1417,22 +1357,13 @@ async function exportarPdf(){
 function coletarEstado(){
   return {
     empresaNome: document.getElementById('empresaNome').value,
-    empresaEmail: document.getElementById('empresaEmail').value,
-    empresaTelefone: document.getElementById('empresaTelefone').value,
-    empresaNuit: document.getElementById('empresaNuit').value,
     empresaContacto: document.getElementById('empresaContacto').value,
-    utilizadorEmail: document.getElementById('utilizadorEmail').value,
-    utilizadorTelefone: document.getElementById('utilizadorTelefone').value,
     docTitulo: document.getElementById('docTitulo').value,
     docNumero: document.getElementById('docNumero').value,
     docLocal: document.getElementById('docLocal').value,
     docData: document.getElementById('docData').value,
     clienteNome: document.getElementById('clienteNome').value,
     clienteAtt: document.getElementById('clienteAtt').value,
-    clienteEmail: document.getElementById('clienteEmail').value,
-    clienteTelefone: document.getElementById('clienteTelefone').value,
-    clienteNuit: document.getElementById('clienteNuit').value,
-    clienteEndereco: document.getElementById('clienteEndereco').value,
     mostrarObjectivo: document.getElementById('mostrarObjectivo').checked,
     objectivoTexto: document.getElementById('objectivoTexto').value,
     moeda: document.getElementById('moeda').value,
@@ -1462,22 +1393,13 @@ function limparTudo(){
   notas = [];
   logoDataUrl = '';
   document.getElementById('empresaNome').value = '';
-  document.getElementById('empresaEmail').value = '';
-  document.getElementById('empresaTelefone').value = '';
-  document.getElementById('empresaNuit').value = '';
   document.getElementById('empresaContacto').value = '';
-  document.getElementById('utilizadorEmail').value = '';
-  document.getElementById('utilizadorTelefone').value = '';
   document.getElementById('docTitulo').value = 'PROPOSTA FINANCEIRA';
   document.getElementById('docNumero').value = '';
   document.getElementById('docLocal').value = '';
   document.getElementById('docData').value = '';
   document.getElementById('clienteNome').value = '';
   document.getElementById('clienteAtt').value = '';
-  document.getElementById('clienteEmail').value = '';
-  document.getElementById('clienteTelefone').value = '';
-  document.getElementById('clienteNuit').value = '';
-  document.getElementById('clienteEndereco').value = '';
   document.getElementById('mostrarObjectivo').checked = true;
   document.getElementById('objectivoTexto').value = '';
   document.getElementById('moeda').value = 'MZN';
@@ -1512,22 +1434,13 @@ function carregarEstadoGuardado(){
   }
 
   document.getElementById('empresaNome').value = estado.empresaNome || '';
-  document.getElementById('empresaEmail').value = estado.empresaEmail || '';
-  document.getElementById('empresaTelefone').value = estado.empresaTelefone || '';
-  document.getElementById('empresaNuit').value = estado.empresaNuit || '';
   document.getElementById('empresaContacto').value = estado.empresaContacto || '';
-  document.getElementById('utilizadorEmail').value = estado.utilizadorEmail || '';
-  document.getElementById('utilizadorTelefone').value = estado.utilizadorTelefone || '';
   document.getElementById('docTitulo').value = estado.docTitulo || 'PROPOSTA FINANCEIRA';
   document.getElementById('docNumero').value = estado.docNumero || '';
   document.getElementById('docLocal').value = estado.docLocal || '';
   document.getElementById('docData').value = estado.docData || '';
   document.getElementById('clienteNome').value = estado.clienteNome || '';
   document.getElementById('clienteAtt').value = estado.clienteAtt || '';
-  document.getElementById('clienteEmail').value = estado.clienteEmail || '';
-  document.getElementById('clienteTelefone').value = estado.clienteTelefone || '';
-  document.getElementById('clienteNuit').value = estado.clienteNuit || '';
-  document.getElementById('clienteEndereco').value = estado.clienteEndereco || '';
   document.getElementById('mostrarObjectivo').checked = estado.mostrarObjectivo !== false;
   document.getElementById('objectivoTexto').value = estado.objectivoTexto || '';
   document.getElementById('moeda').value = estado.moeda || 'MZN';
@@ -1571,33 +1484,6 @@ function atualizarStatusConexao(tipo, texto){
   el.textContent = texto;
 }
 
-/**
- * Pré-visualiza o próximo número disponível, consultando o servidor.
- * Preenche o campo Número com o valor gerado.
- */
-async function gerarNumeroAuto(){
-  const url = obterUrlScript();
-  if(!url){
-    alert('Configura primeiro o URL do Google Apps Script.');
-    return;
-  }
-  const tipo = document.getElementById('docTitulo').value || 'COT';
-  atualizarStatusConexao('aguardar', '🟡 A obter próximo número...');
-  try{
-    const resp = await fetch(url + '?accao=proximoNumero&tipo=' + encodeURIComponent(tipo));
-    const dados = await resp.json();
-    if(dados.sucesso && dados.numero){
-      document.getElementById('docNumero').value = dados.numero;
-      actualizar();
-      atualizarStatusConexao('ok', '🟢 Número gerado: ' + dados.numero);
-    } else {
-      atualizarStatusConexao('erro', '🔴 Não foi possível obter o número');
-    }
-  }catch(e){
-    atualizarStatusConexao('erro', '🔴 Erro ao contactar o servidor');
-  }
-}
-
 async function guardarCotacaoOnline(){
   const url = obterUrlScript();
   if(!url){
@@ -1617,31 +1503,17 @@ async function guardarCotacaoOnline(){
 
   const payload = {
     accao: 'gravar',
-    // Empresa criadora
-    empresaNome: document.getElementById('empresaNome').value,
-    empresaEmail: document.getElementById('empresaEmail').value,
-    empresaTelefone: document.getElementById('empresaTelefone').value,
-    empresaNuit: document.getElementById('empresaNuit').value,
-    // Utilizador
-    utilizadorEmail: document.getElementById('utilizadorEmail').value,
-    utilizadorTelefone: document.getElementById('utilizadorTelefone').value,
-    // Documento
     docTitulo: document.getElementById('docTitulo').value,
     docNumero: document.getElementById('docNumero').value,
+    clienteNome: document.getElementById('clienteNome').value,
+    clienteAtt: document.getElementById('clienteAtt').value,
     docLocal: document.getElementById('docLocal').value,
     docData: document.getElementById('docData').value,
     objectivoTexto: document.getElementById('objectivoTexto').value,
-    // Cliente
-    clienteNome: document.getElementById('clienteNome').value,
-    clienteAtt: document.getElementById('clienteAtt').value,
-    clienteEmail: document.getElementById('clienteEmail').value,
-    clienteTelefone: document.getElementById('clienteTelefone').value,
-    clienteNuit: document.getElementById('clienteNuit').value,
-    clienteEndereco: document.getElementById('clienteEndereco').value,
-    // Financeiro
     itens: itens,
     notas: notas,
     moeda: document.getElementById('moeda').value,
+    empresaNome: document.getElementById('empresaNome').value
   };
 
   try{
@@ -1655,16 +1527,8 @@ async function guardarCotacaoOnline(){
       body: JSON.stringify(payload)
     });
 
-    // Se o número estava vazio, o servidor gerou um automaticamente.
-    // Geramos localmente a mesma lógica para mostrar ao utilizador.
-    const numActual = document.getElementById('docNumero').value.trim();
-    let msgNumero = '';
-    if(!numActual){
-      msgNumero = '\n\n💡 O servidor gerou um número automático para este documento.\nVerifica a Google Sheet para o confirmar.';
-    }
-
     atualizarStatusConexao('ok', '🟢 Cotação enviada! Verifica a tua Google Sheet.');
-    alert('Cotação enviada para o Google Sheets com sucesso!' + msgNumero);
+    alert('Cotação enviada para o Google Sheets com sucesso!\n\n(Se for a primeira vez, confirma na folha de cálculo que a linha apareceu.)');
   }catch(erro){
     atualizarStatusConexao('erro', '🔴 Falha ao enviar — verifica o URL e a ligação à internet');
     alert('Não foi possível enviar a cotação. Verifica:\n\n1. Se o URL está correto e termina em /exec\n2. Se a implementação está activa ("Qualquer pessoa" tem acesso)\n3. Se tens ligação à internet\n\nErro técnico: ' + erro);
@@ -1731,27 +1595,14 @@ function carregarCotacaoDaLista(jsonStr){
   try{
     const cot = JSON.parse(jsonStr);
 
-    // Empresa criadora
-    if(cot['Empresa']) document.getElementById('empresaNome').value = cot['Empresa'];
-    if(cot['Email da Empresa']) document.getElementById('empresaEmail').value = cot['Email da Empresa'];
-    if(cot['Telefone da Empresa']) document.getElementById('empresaTelefone').value = cot['Telefone da Empresa'];
-    if(cot['NUIT da Empresa']) document.getElementById('empresaNuit').value = cot['NUIT da Empresa'];
-    // Utilizador
-    if(cot['Email do Utilizador']) document.getElementById('utilizadorEmail').value = cot['Email do Utilizador'];
-    if(cot['Telefone do Utilizador']) document.getElementById('utilizadorTelefone').value = cot['Telefone do Utilizador'];
-    // Documento
     document.getElementById('docTitulo').value = cot['Tipo de Documento'] || 'PROPOSTA FINANCEIRA';
-    document.getElementById('docNumero').value = cot['Número do Documento'] || cot['Número'] || '';
+    document.getElementById('docNumero').value = cot['Número'] || '';
+    document.getElementById('clienteNome').value = cot['Cliente'] || '';
+    document.getElementById('clienteAtt').value = cot['Att.'] || '';
     document.getElementById('docLocal').value = cot['Local'] || '';
     document.getElementById('objectivoTexto').value = cot['Objectivo do Projecto'] || '';
     document.getElementById('moeda').value = cot['Moeda'] || 'MZN';
-    // Cliente
-    document.getElementById('clienteNome').value = cot['Cliente'] || '';
-    document.getElementById('clienteAtt').value = cot['Att.'] || '';
-    if(cot['Email do Cliente']) document.getElementById('clienteEmail').value = cot['Email do Cliente'];
-    if(cot['Telefone do Cliente']) document.getElementById('clienteTelefone').value = cot['Telefone do Cliente'];
-    if(cot['NUIT do Cliente']) document.getElementById('clienteNuit').value = cot['NUIT do Cliente'];
-    if(cot['Endereço do Cliente']) document.getElementById('clienteEndereco').value = cot['Endereço do Cliente'];
+    document.getElementById('empresaNome').value = cot['Empresa'] || document.getElementById('empresaNome').value;
 
     try{ itens = JSON.parse(cot['Itens (JSON)'] || '[]'); }catch(e){ itens = []; }
     try{ notas = JSON.parse(cot['Notas (JSON)'] || '[]'); }catch(e){ notas = []; }
